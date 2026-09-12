@@ -1,0 +1,23 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Generated FFI bindings and packaged frameworks (produced by apple/scripts/build-xcframework.sh)
+/apple/StreamiumKit/Sources/StreamiumCore/StreamiumCore.swift
+/apple/StreamiumKit/Frameworks/
+/apple/build/
+/apple/*.xcodeproj
+/apple/*.xcworkspace
+
+# Xcode / Swift
+.build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+.swiftpm/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

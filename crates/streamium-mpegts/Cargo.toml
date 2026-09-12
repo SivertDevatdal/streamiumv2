@@ -1,0 +1,12 @@
+[package]
+name = "streamium-mpegts"
+description = "Dependency-free MPEG-2 transport stream demuxer producing elementary-stream access units for hardware decoders."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[dev-dependencies]

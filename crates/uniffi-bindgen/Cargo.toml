@@ -1,0 +1,15 @@
+[package]
+name = "uniffi-bindgen"
+description = "Binary that generates Swift/Kotlin bindings for streamium-ffi (`cargo run -p uniffi-bindgen -- generate ...`)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/main.rs"
+
+[dependencies]
+uniffi = { workspace = true, features = ["cli"] }

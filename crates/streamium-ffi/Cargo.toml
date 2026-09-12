@@ -1,0 +1,19 @@
+[package]
+name = "streamium-ffi"
+description = "UniFFI bindings exposing streamium-core and streamium-mpegts to Swift and Kotlin."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "streamium"
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[dependencies]
+streamium-core = { path = "../streamium-core" }
+streamium-mpegts = { path = "../streamium-mpegts" }
+uniffi = { workspace = true }
+thiserror = { workspace = true }
+serde_json = { workspace = true }

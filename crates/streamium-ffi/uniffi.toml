@@ -1,0 +1,9 @@
+[bindings.swift]
+module_name = "StreamiumCore"
+ffi_module_name = "StreamiumCoreFFI"
+generate_immutable_records = true
+omit_argument_labels = false
+
+[bindings.kotlin]
+package_name = "app.streamium.core"
+cdylib_name = "streamium"

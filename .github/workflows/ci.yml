@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust core (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace
+      - name: Bindings generate (Swift + Kotlin)
+        run: |
+          cargo build -p streamium-ffi
+          cargo run -q -p uniffi-bindgen -- generate --library target/debug/libstreamium.so --language swift --out-dir out/swift
+          cargo run -q -p uniffi-bindgen -- generate --library target/debug/libstreamium.so --language kotlin --out-dir out/kotlin
+          ls -la out/swift out/kotlin/app/streamium/core
+
+  apple:
+    name: Apple (macOS + iOS Simulator)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+      - name: Build XCFramework and bindings
+        env:
+          PROFILE: debug
+          SKIP_TARGETS: x86_64-apple-ios x86_64-apple-darwin
+        run: ./apple/scripts/build-xcframework.sh
+      - name: Swift package tests (macOS)
+        working-directory: apple/StreamiumKit
+        run: swift test
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          cd apple && xcodegen generate
+      - name: Build macOS app
+        working-directory: apple
+        run: |
+          xcodebuild -project Streamium.xcodeproj -scheme Streamium-macOS -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO build | xcpretty && exit ${PIPESTATUS[0]}
+      - name: Build iOS app (simulator)
+        working-directory: apple
+        run: |
+          xcodebuild -project Streamium.xcodeproj -scheme Streamium-iOS \
+            -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | xcpretty && exit ${PIPESTATUS[0]}
