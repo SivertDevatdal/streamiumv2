@@ -102,10 +102,9 @@ fn read_channel<R: BufRead>(xml: &mut Reader<R>, id: String) -> Result<EpgChanne
                     in_display_name = true;
                     text.clear();
                 }
-                "icon" => {
-                    if ch.icon.is_none() {
-                        ch.icon = attr(&e, "src");
-                    }
+                // The first icon wins: some guides repeat the element per size.
+                "icon" if ch.icon.is_none() => {
+                    ch.icon = attr(&e, "src");
                 }
                 _ => {}
             },
