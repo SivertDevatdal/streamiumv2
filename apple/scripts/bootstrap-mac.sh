@@ -103,6 +103,15 @@ fi
 
 cat <<'NEXT'
 
+To pick up future changes automatically, leave this running in a terminal:
+
+    ./apple/scripts/watch-mac.sh
+
+It checks for new commits every 30 seconds, rebuilds only what changed, and
+relaunches the app. Your sources and settings survive rebuilds. Use
+--no-restart if you would rather it build quietly while you are watching
+something.
+
 Next, inside the app:
   1. Go to Sources, press +, choose "Xtream account".
   2. Enter your server address, username and password, then Add.

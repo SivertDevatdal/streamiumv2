@@ -61,6 +61,18 @@ username and password. Channels appear under **Live TV**; the guide keeps
 downloading in the background. Long-press the player for a diagnostics overlay
 showing the detected format, time to first frame, buffer depth and codecs.
 
+### Staying up to date
+
+```sh
+./apple/scripts/watch-mac.sh
+```
+
+Leave it running. It polls the branch, pulls, rebuilds only what changed (Rust
+core, Xcode project, or just the Swift) and relaunches the app. Sources and
+settings live outside the app bundle, so provider details are not re-entered
+after a rebuild. `--no-restart` builds without interrupting playback, `--once`
+does a single pull-build-run.
+
 ### Everything else
 
 ```sh

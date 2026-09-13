@@ -103,6 +103,25 @@ Environment variables:
   a distributable build needs.
 - `SKIP_IOS=1` builds the macOS slice only.
 
+## Staying up to date while developing
+
+```sh
+./apple/scripts/watch-mac.sh                 # watch, rebuild, relaunch
+./apple/scripts/watch-mac.sh --once          # a single pull, build and run
+./apple/scripts/watch-mac.sh --no-restart    # build without disturbing playback
+INTERVAL=15 ./apple/scripts/watch-mac.sh     # poll more often (default 30s)
+```
+
+The watcher only does the expensive work when it has to: the Rust core and
+bindings are rebuilt when anything under `crates/` or a manifest changes, the
+Xcode project is regenerated only when `apple/project.yml` changes, and a
+Swift-only change goes straight to `xcodebuild`.
+
+A failed build does not stop the watch. It prints the compiler errors, keeps
+the full log at `apple/build/xcodebuild.log`, and carries on waiting for the
+next commit. If the working tree has local edits the pull is skipped rather
+than risking them.
+
 ## Connecting a provider
 
 Streamium ships no sources. In the app, **Sources → +**:
