@@ -57,10 +57,13 @@ targets:
         NSHighResolutionCapable: true
         # Media servers, tuners and many IPTV providers are reachable only
         # over plain HTTP. Justify this in the App Review notes.
+        #
+        # Only NSAllowsArbitraryLoads. Apple ignores it whenever
+        # NSAllowsArbitraryLoadsForMedia, NSAllowsArbitraryLoadsInWebContent
+        # or NSAllowsLocalNetworking is also present, which would leave plain
+        # HTTP exempt for media but blocked for the provider's own API.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
-          NSAllowsArbitraryLoadsForMedia: true
-          NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Streamium connects to media servers and TV tuners on your local network.
 
   Streamium-iOS:
@@ -100,10 +103,12 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+        # Only NSAllowsArbitraryLoads. Apple ignores it whenever
+        # NSAllowsArbitraryLoadsForMedia, NSAllowsArbitraryLoadsInWebContent
+        # or NSAllowsLocalNetworking is also present, which would leave plain
+        # HTTP exempt for media but blocked for the provider's own API.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
-          NSAllowsArbitraryLoadsForMedia: true
-          NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Streamium connects to media servers and TV tuners on your local network.
 
 schemes:

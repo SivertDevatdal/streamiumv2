@@ -71,6 +71,8 @@ rebuild() {
     return 1
   fi
 
+  "$APPLE/scripts/check-app-plist.sh" "$APP"
+
   if [ "$RESTART" = "1" ]; then
     if pgrep -f "Streamium.app/Contents/MacOS/Streamium" >/dev/null; then
       dim "Restarting Streamium"

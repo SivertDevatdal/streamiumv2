@@ -91,6 +91,7 @@ fi
 
 APP="$APPLE/build/DerivedData/Build/Products/Debug/Streamium.app"
 step "Built $APP"
+"$APPLE/scripts/check-app-plist.sh" "$APP"
 
 if [ "$RUN_APP" = "1" ]; then
   step "Launching Streamium"
