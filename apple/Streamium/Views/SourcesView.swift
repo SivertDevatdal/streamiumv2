@@ -8,11 +8,14 @@ struct SourcesView: View {
     var body: some View {
         List {
             if library.sources.isEmpty {
-                ContentUnavailableView(
-                    "No sources yet",
-                    systemImage: "server.rack",
-                    description: Text("Add a playlist you are entitled to use, an Xtream account from your provider, or browse your own files in Library.")
-                )
+                ContentUnavailableView {
+                    Label("No sources yet", systemImage: "server.rack")
+                } description: {
+                    Text("Add an Xtream account from your provider, a playlist you are entitled to use, or browse your own files under Library.")
+                } actions: {
+                    Button("Add a Source") { showAdd = true }
+                        .buttonStyle(.borderedProminent)
+                }
             }
             if !library.sources.isEmpty {
                 Section("Playback") {
@@ -98,9 +101,12 @@ struct AddSourceView: View {
                     case .xtream:
                         TextField("Server address", text: $server)
                             .autocorrectionDisabled()
+                            .onChange(of: server) { _, value in absorbCredentials(from: value) }
                         TextField("Username", text: $username)
                             .autocorrectionDisabled()
                         SecureField("Password", text: $password)
+                        Text("Paste the whole URL your provider gave you and the username and password are filled in for you.")
+                            .font(.footnote).foregroundStyle(.secondary)
                     }
                 }
 
@@ -125,6 +131,35 @@ struct AddSourceView: View {
         #if os(macOS)
         .frame(minWidth: 480, minHeight: 360)
         #endif
+    }
+
+    /// Providers usually hand out one link such as
+    /// `http://host:8080/get.php?username=abc&password=def&type=m3u_plus`.
+    /// Pasting it into the address field should not then require retyping the
+    /// credentials that are sitting right there in the query string.
+    private func absorbCredentials(from text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.localizedCaseInsensitiveContains("username="),
+              var components = URLComponents(string: trimmed) else { return }
+
+        let items = components.queryItems ?? []
+        func value(_ name: String) -> String? {
+            items.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }?
+                .value?
+                .trimmingCharacters(in: .whitespaces)
+        }
+        if let found = value("username"), !found.isEmpty { username = found }
+        if let found = value("password"), !found.isEmpty { password = found }
+
+        // Reduce the address to the server root. Dropping the query also stops
+        // this from running again on the next change.
+        components.query = nil
+        components.fragment = nil
+        for script in ["/get.php", "/player_api.php", "/panel_api.php", "/xmltv.php"]
+        where components.path.hasSuffix(script) {
+            components.path = String(components.path.dropLast(script.count))
+        }
+        if let cleaned = components.string, cleaned != text { server = cleaned }
     }
 
     private var isValid: Bool {

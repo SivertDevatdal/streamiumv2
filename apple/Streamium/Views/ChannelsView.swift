@@ -10,6 +10,7 @@ struct ChannelsView: View {
     @State private var query = ""
     @State private var group: String? = nil
     @State private var favouritesOnly = false
+    @State private var showAdd = false
 
     private var visible: [FfiChannel] {
         var list: [FfiChannel]
@@ -50,9 +51,17 @@ struct ChannelsView: View {
         .navigationTitle(title)
         .overlay {
             if library.channels.isEmpty {
-                ContentUnavailableView("Nothing here yet", systemImage: "tv", description: Text("Add a source to see channels."))
+                ContentUnavailableView {
+                    Label("No channels yet", systemImage: "tv")
+                } description: {
+                    Text("Streamium ships no channels. Add the provider or playlist you use and they appear here.")
+                } actions: {
+                    Button("Add a Source") { showAdd = true }
+                        .buttonStyle(.borderedProminent)
+                }
             }
         }
+        .sheet(isPresented: $showAdd) { AddSourceView() }
         .toolbar {
             ToolbarItem {
                 Toggle(isOn: $favouritesOnly) { Label("Favourites", systemImage: "star") }

@@ -37,8 +37,13 @@ struct GuideView: View {
         .navigationTitle("Guide")
         .overlay {
             if library.guideProgrammeCount == 0 {
-                ContentUnavailableView("No guide loaded", systemImage: "list.bullet.rectangle",
-                                       description: Text("Add a source with an XMLTV guide URL."))
+                ContentUnavailableView(
+                    "No guide loaded",
+                    systemImage: "list.bullet.rectangle",
+                    description: Text(library.isLoadingGuide
+                        ? "Downloading the programme guide. This can take a while on a large provider."
+                        : "Add a source that offers an XMLTV guide. Xtream accounts provide one automatically.")
+                )
             }
         }
     }

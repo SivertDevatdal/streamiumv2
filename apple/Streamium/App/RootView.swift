@@ -23,7 +23,13 @@ enum AppSection: String, CaseIterable, Identifiable {
 struct RootView: View {
     @EnvironmentObject private var library: Library
     @EnvironmentObject private var playback: PlaybackController
-    @State private var section: AppSection? = .live
+    @State private var section: AppSection?
+
+    /// Somewhere to start: the channel list is useless until a source exists,
+    /// so a first run opens on Sources instead.
+    private var landingSection: AppSection {
+        library.sources.isEmpty ? .sources : .live
+    }
 
     var body: some View {
         #if os(macOS)
@@ -33,16 +39,19 @@ struct RootView: View {
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
-            content(for: section ?? .live)
+            content(for: section ?? landingSection)
         }
         .overlay(alignment: .bottom) { NowPlayingBar() }
+        .onAppear { if section == nil { section = landingSection } }
         #else
-        TabView {
+        TabView(selection: $section) {
             ForEach(AppSection.allCases) { s in
                 NavigationStack { content(for: s) }
                     .tabItem { Label(s.rawValue, systemImage: s.symbol) }
+                    .tag(Optional(s))
             }
         }
+        .onAppear { if section == nil { section = landingSection } }
         .fullScreenCover(isPresented: Binding(get: { playback.item != nil }, set: { if !$0 { playback.stop() } })) {
             PlayerView()
         }
