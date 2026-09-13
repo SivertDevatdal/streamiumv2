@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/streamium-core",
+    "crates/streamium-desktop",
     "crates/streamium-mpegts",
     "crates/streamium-ffi",
     "crates/uniffi-bindgen",
@@ -22,6 +23,10 @@ quick-xml = "0.42"
 flate2 = "1.1"
 url = "2.5"
 uniffi = "0.32"
+ureq = "3.4"
+eframe = { version = "0.32", default-features = false, features = ["glow", "default_fonts", "wayland", "x11"] }
+egui = "0.32"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 # Release builds are what ship inside the app bundles. Optimise for speed,
 # strip symbols, and abort on panic so a bug in the core can never unwind

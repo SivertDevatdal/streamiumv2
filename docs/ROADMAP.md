@@ -51,7 +51,16 @@
 
 - [ ] Android (Jetpack Compose, ExoPlayer + MediaCodec path from the
       shared demuxer).
-- [ ] Windows and Linux shells in Rust (Slint or egui), Media Foundation and
-      VA-API decoders, same core crates linked directly.
+- [x] Windows and Linux shell in Rust (egui), linking the core crates
+      directly: Xtream accounts, M3U playlists and local folders, XMLTV guide,
+      groups, search, favourites, and a stream analyser that reports what the
+      demuxer finds on the tester's own connection.
+- [ ] Video inside the desktop window: Media Foundation (Windows) and VA-API
+      (Linux) decoders fed by the shared demuxer, replacing the hand-off to
+      mpv/VLC.
+- [ ] Windows credential storage (DPAPI) instead of plain text in
+      `%APPDATA%\Streamium\config.json`.
+- [ ] Code-signed Windows build so SmartScreen stops warning about it.
+- [ ] Channel logos in the desktop list.
 - [ ] Shared UI test fixtures: the same playlist and EPG samples drive UI
       tests on all platforms.

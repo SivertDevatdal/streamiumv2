@@ -1,0 +1,30 @@
+[package]
+name = "streamium-desktop"
+description = "Streamium desktop shell for Windows and Linux: the Rust core and demuxer behind an egui interface."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "streamium"
+path = "src/main.rs"
+
+[dependencies]
+streamium-core = { path = "../streamium-core" }
+streamium-mpegts = { path = "../streamium-mpegts" }
+
+eframe = { workspace = true }
+egui = { workspace = true }
+ureq = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+flate2 = { workspace = true }
+url = { workspace = true }
+
+# Honour the proxy the user configured in Internet Options, which is how
+# corporate and school networks on Windows are set up.
+[target.'cfg(windows)'.dependencies]
+ureq = { workspace = true, features = ["win-system-proxy"] }

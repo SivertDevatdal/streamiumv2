@@ -17,7 +17,8 @@ that keep it a general-purpose player.
 | `crates/streamium-mpegts` (transport-stream demuxer) | Implemented; verified against real streams down to identical decoded frames |
 | `crates/streamium-ffi` (Swift/Kotlin bindings via UniFFI) | Implemented, Swift bindings generate |
 | `apple/` (SwiftUI app for iOS, iPadOS, macOS + playback engines) | Written, tests included; **not yet compiled** (needs macOS) |
-| Android, Windows, Linux shells | Planned, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+| `crates/streamium-desktop` (Windows/Linux shell) | Implemented and building on a Windows runner; playback is handed to mpv/VLC |
+| Android shell | Planned, see [docs/ROADMAP.md](docs/ROADMAP.md) |
 
 The demuxer is checked against transport streams produced by ffmpeg in three
 codec combinations (H.264/AAC, HEVC/AC-3, MPEG-2/MP2). Every elementary
@@ -33,6 +34,7 @@ crates/streamium-core     sans-IO domain logic (no networking, no threads)
 crates/streamium-mpegts   MPEG-TS demuxer feeding platform hardware decoders
 crates/streamium-ffi      UniFFI surface: the one crate that crosses languages
 crates/uniffi-bindgen     binary that generates Swift/Kotlin bindings
+crates/streamium-desktop  Windows/Linux shell (egui) linking the core directly
 apple/StreamiumKit        Swift package: generated bindings + playback engines
 apple/Streamium           SwiftUI application (iOS/iPadOS/macOS targets)
 apple/scripts             build-xcframework.sh
@@ -61,6 +63,28 @@ username and password. Channels appear under **Live TV**; the guide keeps
 downloading in the background. Long-press the player for a diagnostics overlay
 showing the detected format, time to first frame, buffer depth and codecs.
 
+### Run it on Windows or Linux
+
+```sh
+cargo run -p streamium-desktop --release
+```
+
+The desktop shell links the core crates directly — no bindings, no FFI. It
+browses Xtream accounts, M3U playlists and local folders, downloads and
+indexes the XMLTV guide, and hands playback to mpv or VLC. **Analyse stream**
+runs `streamium-mpegts` over the first seconds of a channel and reports the
+programs, codecs, key-frame latency and errors it found, which is how a
+tester on another machine can tell us something useful about a stream we
+cannot reach.
+
+On Windows nothing else is required. On Linux, install the windowing headers
+first: `libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev
+libxrandr-dev libxi-dev libgl1-mesa-dev`.
+
+A ready-made `streamium.exe` is attached to every CI run as the
+`streamium-windows-x86_64` artifact. [docs/WINDOWS.md](docs/WINDOWS.md) is
+written for someone testing that build.
+
 ### Everything else
 
 ```sh
@@ -85,3 +109,4 @@ Full instructions: [docs/BUILDING.md](docs/BUILDING.md).
 - [docs/PLAYBACK.md](docs/PLAYBACK.md): engine selection, the transport-stream pipeline, latency strategy.
 - [docs/COMPLIANCE.md](docs/COMPLIANCE.md): App Store and legal posture, the legitimate feature set.
 - [docs/ROADMAP.md](docs/ROADMAP.md): phased plan from iOS/macOS to every platform.
+- [docs/WINDOWS.md](docs/WINDOWS.md): installing, testing and reporting on the Windows build.

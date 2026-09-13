@@ -20,10 +20,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Format
         run: cargo fmt --all -- --check
+      - name: Install ffmpeg (test fixtures) and the libraries the desktop shell links against
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg \
+            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Install ffmpeg (generates the real-stream test fixtures)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Generate test streams
         run: ./scripts/make-test-streams.sh
       - name: Test
@@ -70,3 +74,32 @@ jobs:
         run: |
           xcodebuild -project Streamium.xcodeproj -scheme Streamium-iOS \
             -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | xcpretty && exit ${PIPESTATUS[0]}
+
+  windows:
+    name: Windows desktop
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Clippy
+        run: cargo clippy -p streamium-desktop --all-targets -- -D warnings
+      - name: Test
+        run: cargo test -p streamium-desktop
+      - name: Build
+        run: cargo build -p streamium-desktop --release
+      - name: Stage the download
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item target/release/streamium.exe dist/streamium.exe
+          Copy-Item docs/WINDOWS.md dist/README.md
+          Copy-Item docs/COMPLIANCE.md dist/COMPLIANCE.md
+      - name: Upload the Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: streamium-windows-x86_64
+          path: dist/
+          retention-days: 90
