@@ -55,9 +55,16 @@ AVSampleBufferRenderSynchronizer
 
 Continuity-counter gaps, PCR jumps larger than one second and PMT version
 changes all produce `.discontinuity`. The engine flushes both renderers,
-resets the timebase, and resumes on the next key frame (the demuxer already
-withholds video until an IDR/IRAP frame). Channel changes reuse the same
+resets the timebase, and resumes on the next key frame. The demuxer
+co-operates: it withholds video until an IDR/IRAP frame, both at the start of
+a stream and again after any gap, because frames that reference data which
+never arrived decode to visible artefacts. Channel changes reuse the same
 path: tear down the data task, `resetTiming()`, open the next URL.
+
+This behaviour is covered by tests against real streams. Cutting a run of
+bytes out of a transport stream makes the demuxer report the gap and then
+deliver only whole, decodable runs: ffmpeg decodes the result with no errors,
+where an ungated demuxer yields frames the decoder has to discard.
 
 ### Why not decode in Rust?
 

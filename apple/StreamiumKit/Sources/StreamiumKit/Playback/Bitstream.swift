@@ -143,7 +143,14 @@ public struct ADTSHeader: Equatable {
         return Data([UInt8(bits >> 8), UInt8(bits & 0xFF)])
     }
 
-    /// Split a PES payload into `(header, payloadRange)` pairs, skipping junk between frames.
+    /// Split a PES payload into `(header, payloadRange)` pairs, skipping junk
+    /// between frames.
+    ///
+    /// The range covers the raw AAC payload **without** the ADTS header,
+    /// because VideoToolbox and CoreAudio want bare AAC frames described by
+    /// the `audioSpecificConfig` magic cookie. AC-3 and MPEG audio differ:
+    /// their ranges include the sync frame header, which the decoder parses
+    /// itself.
     public static func frames(in bytes: [UInt8]) -> [(ADTSHeader, Range<Int>)] {
         var out: [(ADTSHeader, Range<Int>)] = []
         var i = 0
@@ -156,6 +163,33 @@ public struct ADTSHeader: Equatable {
         }
         return out
     }
+}
+
+/// Reads big-endian bit fields, which is how AC-3's bit stream information
+/// field is laid out. Returns nil rather than trapping when it runs out.
+struct BitReader {
+    private let bytes: [UInt8]
+    private var position: Int
+
+    init(_ bytes: [UInt8], byteOffset: Int) {
+        self.bytes = bytes
+        self.position = byteOffset * 8
+    }
+
+    mutating func read(_ count: Int) -> Int? {
+        var value = 0
+        for _ in 0..<count {
+            let byteIndex = position >> 3
+            guard byteIndex < bytes.count else { return nil }
+            let bit = (bytes[byteIndex] >> (7 - UInt8(position & 7))) & 1
+            value = (value << 1) | Int(bit)
+            position += 1
+        }
+        return value
+    }
+
+    @discardableResult
+    mutating func skip(_ count: Int) -> Bool { read(count) != nil }
 }
 
 /// AC-3 and E-AC-3 sync frame parsing (sizes only; CoreAudio decodes the rest).
@@ -191,14 +225,28 @@ public enum AC3 {
             case 1: sampleRate = 44100; words = frameWords441[frmsizecod]
             default: sampleRate = 32000; words = kbps * 3
             }
-            let acmod = Int(bytes[i + 6] >> 5)
-            let lfe = false // needs acmod-dependent bit parsing; CoreAudio derives the real layout
+            // The bit stream information field begins at byte 5 with bsid and
+            // bsmod. acmod is followed by mix-level fields that are only
+            // present for certain channel modes, so lfeon has no fixed
+            // position and the field must be walked bit by bit.
+            var reader = BitReader(bytes, byteOffset: i + 5)
+            guard reader.skip(5), reader.skip(3), let acmod = reader.read(3) else { return nil }
+            if acmod & 0x01 != 0, acmod != 0x01 {
+                guard reader.skip(2) else { return nil } // cmixlev
+            }
+            if acmod & 0x04 != 0 {
+                guard reader.skip(2) else { return nil } // surmixlev
+            }
+            if acmod == 0x02 {
+                guard reader.skip(2) else { return nil } // dsurmod
+            }
+            guard let lfeon = reader.read(1) else { return nil }
             return FrameInfo(
                 isEnhanced: false,
                 sampleRate: sampleRate,
                 frameLength: words * 2,
                 samplesPerFrame: 1536,
-                channels: acmodChannels[min(acmod, 7)] + (lfe ? 1 : 0)
+                channels: acmodChannels[acmod] + lfeon
             )
         } else if bsid <= 16 {
             // E-AC-3
@@ -216,6 +264,7 @@ public enum AC3 {
                 numblks = [1, 2, 3, 6][numblkscod]
             }
             guard sampleRate > 0 else { return nil }
+            // E-AC-3 puts acmod and lfeon at fixed positions in byte 4.
             let acmod = Int((bytes[i + 4] >> 1) & 0x07)
             let lfe = bytes[i + 4] & 0x01 == 1
             return FrameInfo(
@@ -229,6 +278,8 @@ public enum AC3 {
         return nil
     }
 
+    /// Split a payload into `(info, frameRange)` pairs. Unlike AAC, the range
+    /// includes the sync frame header: CoreAudio decodes complete AC-3 frames.
     public static func frames(in bytes: [UInt8]) -> [(FrameInfo, Range<Int>)] {
         var out: [(FrameInfo, Range<Int>)] = []
         var i = 0
@@ -302,6 +353,8 @@ public enum MPEGAudio {
         )
     }
 
+    /// Split a payload into `(info, frameRange)` pairs. The range includes the
+    /// frame header, which the decoder parses itself.
     public static func frames(in bytes: [UInt8]) -> [(FrameInfo, Range<Int>)] {
         var out: [(FrameInfo, Range<Int>)] = []
         var i = 0

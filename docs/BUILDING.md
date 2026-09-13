@@ -15,6 +15,37 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
+## Real-stream test fixtures
+
+Some tests run against transport streams produced by a real encoder rather
+than by hand. They are generated rather than committed, so the repository
+stays small, and every test that needs them skips when they are absent.
+
+```sh
+./scripts/make-test-streams.sh   # requires ffmpeg; writes to
+                                 # crates/streamium-mpegts/tests/fixtures
+cargo test --workspace           # the real-stream suite now runs
+./scripts/verify-demuxer.sh      # decode the demuxer's output and compare it
+                                 # frame by frame with the original stream
+```
+
+`make-test-streams.sh` produces H.264/AAC, HEVC/AC-3 and MPEG-2/MP2 streams, a
+two-service multiplex, and the matching elementary streams (including 5.1 and
+mono AC-3) that the Swift bitstream tests read. Override the defaults with
+`DURATION`, `SIZE` and `FPS`.
+
+The Swift tests find the fixtures relative to the repository. Point them
+somewhere else with `STREAMIUM_FIXTURES=/path/to/fixtures swift test`.
+
+Debugging a stream by hand:
+
+```sh
+cargo run -p streamium-mpegts --example tsdump -- stream.ts out_dir 1500
+```
+
+It prints the programs, codecs, access unit counts and timing, and writes each
+elementary stream to `out_dir` so an external decoder can check it.
+
 ## Generate bindings only (any OS)
 
 ```sh
@@ -30,6 +61,10 @@ cargo run -p uniffi-bindgen -- generate \
 On macOS the library is `libstreamium.dylib`.
 
 ## Apple app
+
+> The Apple sources have not been compiled yet: this repository's CI is the
+> first thing to build them. Expect to fix compile errors on the first run.
+
 
 ```sh
 ./apple/scripts/build-xcframework.sh     # Rust → StreamiumCoreFFI.xcframework + Swift bindings

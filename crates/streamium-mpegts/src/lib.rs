@@ -279,6 +279,7 @@ impl Demuxer {
         let has_payload = afc & 0x01 != 0;
 
         // Continuity check (only packets with payload increment the counter).
+        let mut lost_continuity = false;
         let state = self.pids.entry(pid).or_default();
         if has_payload {
             if let Some(last) = state.last_cc {
@@ -287,6 +288,7 @@ impl Demuxer {
                     self.events.push(Event::Discontinuity { pid });
                     state.pes = None;
                     state.section = None;
+                    lost_continuity = true;
                 }
             }
             state.last_cc = Some(cc);
@@ -295,6 +297,13 @@ impl Demuxer {
         }
         if discontinuity {
             self.events.push(Event::Discontinuity { pid });
+            lost_continuity = true;
+        }
+        // Frames after a gap reference data that never arrived, so decoding
+        // them produces artefacts. Wait for the next random access point,
+        // exactly as at the start of the stream.
+        if lost_continuity {
+            self.seen_keyframe.insert(pid, false);
         }
         if scrambled || payload_start >= PACKET_SIZE {
             return;

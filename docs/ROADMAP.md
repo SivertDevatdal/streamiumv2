@@ -10,9 +10,16 @@
 
 ## Phase 1: iOS + macOS release candidate
 
+- [x] Demuxer verified against real ffmpeg-produced streams: H.264/AAC,
+      HEVC/AC-3, MPEG-2/MP2 and a two-service multiplex all demux to
+      bit-identical decoded frames and audio samples, and survive
+      mid-broadcast tune-in, packet loss, garbage and truncation.
+- [x] Swift bitstream parsers checked against the same real elementary
+      streams (frame counts, sample rates, channel counts including 5.1).
 - [ ] First Xcode build pass over the Swift code; fix compile errors.
-- [ ] TransportStreamEngine end-to-end on a self-hosted test stream
-      (ffmpeg-generated TS with H.264 + AAC, then HEVC + AC-3).
+      Needs macOS; nothing in this repository has compiled Swift yet.
+- [ ] TransportStreamEngine end-to-end on a device, using the generated
+      streams served over HTTP.
 - [ ] AVPlayerEngine with headers, PiP, AirPlay, background audio.
 - [ ] Sources: M3U (remote/local), Xtream; Keychain storage; refresh on
       launch and on a schedule.

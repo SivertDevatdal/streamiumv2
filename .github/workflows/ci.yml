@@ -22,8 +22,14 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Install ffmpeg (generates the real-stream test fixtures)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Generate test streams
+        run: ./scripts/make-test-streams.sh
       - name: Test
         run: cargo test --workspace
+      - name: Verify the demuxed elementary streams decode
+        run: ./scripts/verify-demuxer.sh
       - name: Bindings generate (Swift + Kotlin)
         run: |
           cargo build -p streamium-ffi
@@ -45,6 +51,8 @@ jobs:
           PROFILE: debug
           SKIP_TARGETS: x86_64-apple-ios x86_64-apple-darwin
         run: ./apple/scripts/build-xcframework.sh
+      - name: Install ffmpeg and generate test streams
+        run: brew install ffmpeg && ./scripts/make-test-streams.sh
       - name: Swift package tests (macOS)
         working-directory: apple/StreamiumKit
         run: swift test

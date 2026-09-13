@@ -14,10 +14,17 @@ that keep it a general-purpose player.
 | Layer | State |
 |---|---|
 | `crates/streamium-core` (playlists, Xtream, XMLTV/EPG, catalog) | Implemented, unit-tested |
-| `crates/streamium-mpegts` (transport-stream demuxer) | Implemented, tested with a synthetic muxer |
+| `crates/streamium-mpegts` (transport-stream demuxer) | Implemented; verified against real streams down to identical decoded frames |
 | `crates/streamium-ffi` (Swift/Kotlin bindings via UniFFI) | Implemented, Swift bindings generate |
-| `apple/` (SwiftUI app for iOS, iPadOS, macOS + playback engines) | Scaffolded, needs an Xcode build pass |
+| `apple/` (SwiftUI app for iOS, iPadOS, macOS + playback engines) | Written, tests included; **not yet compiled** (needs macOS) |
 | Android, Windows, Linux shells | Planned, see [docs/ROADMAP.md](docs/ROADMAP.md) |
+
+The demuxer is checked against transport streams produced by ffmpeg in three
+codec combinations (H.264/AAC, HEVC/AC-3, MPEG-2/MP2). Every elementary
+stream it extracts decodes to **bit-identical video frames and audio samples**
+compared with decoding the original stream directly. It is also exercised for
+mid-broadcast tune-in, packet loss, garbage prefixes, truncation and arbitrary
+network chunk sizes. Run `./scripts/verify-demuxer.sh` to reproduce.
 
 ## Repository layout
 
@@ -37,6 +44,11 @@ docs/                     architecture, playback, compliance, roadmap, building
 ```sh
 # Core: build and test on any OS
 cargo test --workspace
+
+# Optional: generate real transport streams and prove the demuxer against them
+./scripts/make-test-streams.sh     # needs ffmpeg
+cargo test --workspace             # the real-stream suite now runs too
+./scripts/verify-demuxer.sh        # decodes the output and compares frames
 
 # Apple: produce the XCFramework + Swift bindings, then open the project
 ./apple/scripts/build-xcframework.sh

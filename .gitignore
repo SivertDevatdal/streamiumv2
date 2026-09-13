@@ -21,3 +21,4 @@ xcuserdata/
 .idea/
 .vscode/
 *.swp
+/crates/streamium-mpegts/tests/fixtures/
