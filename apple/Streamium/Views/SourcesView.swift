@@ -14,13 +14,23 @@ struct SourcesView: View {
                     description: Text("Add a playlist you are entitled to use, an Xtream account from your provider, or browse your own files in Library.")
                 )
             }
+            if !library.sources.isEmpty {
+                Section("Playback") {
+                    Toggle("Prefer HLS for Xtream live channels", isOn: $library.preferHLSForXtream)
+                    Text("Transport streams give the lowest latency and are the default. Turn this on if a provider only serves HLS, then refresh.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
             ForEach(library.sources) { source in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(source.name).font(.headline)
                     Text(source.location).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     if let error = source.lastError {
                         Text(error).font(.caption).foregroundStyle(.red)
-                    } else if let date = source.lastRefreshed {
+                    } else if let status = source.status {
+                        Text(status).font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let date = source.lastRefreshed, source.lastError == nil {
                         Text("Updated \(date.formatted(.relative(presentation: .named)))")
                             .font(.caption2).foregroundStyle(.tertiary)
                     }
@@ -42,6 +52,12 @@ struct SourcesView: View {
                     if library.isRefreshing { ProgressView().controlSize(.small) } else { Label("Refresh", systemImage: "arrow.clockwise") }
                 }
                 .disabled(library.isRefreshing)
+            }
+            ToolbarItem {
+                if library.isLoadingGuide {
+                    Label("Loading guide", systemImage: "clock.arrow.circlepath")
+                        .labelStyle(.iconOnly).foregroundStyle(.secondary)
+                }
             }
         }
         .sheet(isPresented: $showAdd) { AddSourceView() }

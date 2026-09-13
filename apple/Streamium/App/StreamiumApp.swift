@@ -22,7 +22,10 @@ struct StreamiumApp: App {
             RootView()
                 .environmentObject(library)
                 .environmentObject(playback)
-                .sheet(isPresented: .constant(!acceptedUsageNotice)) {
+                .sheet(isPresented: Binding(
+                    get: { !acceptedUsageNotice },
+                    set: { showing in if !showing { acceptedUsageNotice = true } }
+                )) {
                     UsageNoticeView { acceptedUsageNotice = true }
                         .interactiveDismissDisabled()
                 }

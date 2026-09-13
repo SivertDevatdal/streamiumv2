@@ -56,11 +56,10 @@ impl Catalog {
                 continue;
             };
             let name = s.name.clone().unwrap_or_else(|| format!("Channel {id}"));
-            let url = s
-                .direct_source
-                .clone()
-                .filter(|d| !d.is_empty())
-                .unwrap_or_else(|| endpoints.live_stream_url(id, container));
+            // `direct_source` is deliberately ignored: panels frequently
+            // populate it with an address that only resolves inside their own
+            // network, while the constructed URL always works for the account.
+            let url = endpoints.live_stream_url(id, container);
             let mut ch = Channel::new(format!("xc-live-{id}"), name, url);
             ch.kind = MediaKind::Live;
             ch.format = match container {
@@ -322,13 +321,27 @@ mod tests {
                 name: Some("broken".into()),
                 ..Default::default()
             },
+            LiveStream {
+                stream_id: Some("202".into()),
+                name: Some("Has direct source".into()),
+                // Panels often advertise an address that only resolves inside
+                // their own network, so it must be ignored.
+                direct_source: Some("http://10.0.0.5:8000/live/202.ts".into()),
+                ..Default::default()
+            },
         ];
         let c = Catalog::from_xtream_live(&e, &cats, &streams, LiveContainer::Ts);
-        assert_eq!(c.len(), 1);
+        assert_eq!(c.len(), 2, "entries without a stream id are skipped");
         let ch = &c.channels()[0];
         assert_eq!(ch.url, "http://h/live/u/p/101.ts");
         assert_eq!(ch.group.as_deref(), Some("UK"));
         assert_eq!(ch.catchup.as_ref().unwrap().days, Some(7));
         assert_eq!(ch.format, StreamFormat::MpegTs);
+
+        assert_eq!(
+            c.channels()[1].url,
+            "http://h/live/u/p/202.ts",
+            "direct_source must be ignored in favour of the account's own URL"
+        );
     }
 }

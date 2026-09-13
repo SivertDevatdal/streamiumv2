@@ -11,6 +11,7 @@ public final class Library: ObservableObject {
     @Published public private(set) var groups: [String] = []
     @Published public private(set) var favouriteIDs: Set<String> = []
     @Published public private(set) var isRefreshing = false
+    @Published public private(set) var isLoadingGuide = false
     @Published public private(set) var guideProgrammeCount: UInt64 = 0
     @Published public var preferHLSForXtream = false
 
@@ -98,16 +99,29 @@ public final class Library: ObservableObject {
         }
         record.lastRefreshed = Date()
         record.lastError = nil
+        record.status = result.status
 
         // Cache the parsed channels so the next launch is instant and offline.
         let payload = try JSONEncoder().encode(result.channels.map(CachedChannel.init))
         store.cache(payload, for: "playlist-\(record.id)")
-        for (i, doc) in result.epgDocuments.enumerated() {
-            store.cache(doc, for: "epg-\(record.id)-\(i)")
-        }
         await rebuildCatalogFromCache(including: (record.id, result.channels))
-        for doc in result.epgDocuments {
-            await loadGuide(doc)
+
+        // The guide is fetched afterwards and in the background. A provider's
+        // XMLTV can be hundreds of megabytes, and the channel list must not
+        // wait for it, nor fail if it is unavailable.
+        let id = record.id
+        let urls = result.epgURLs
+        Task { [weak self] in await self?.downloadGuides(urls, for: id) }
+    }
+
+    private func downloadGuides(_ urls: [String], for id: UUID) async {
+        guard !urls.isEmpty else { return }
+        isLoadingGuide = true
+        defer { isLoadingGuide = false }
+        for (index, url) in urls.enumerated() {
+            guard let data = try? await loader.fetchData(url) else { continue }
+            store.cache(data, for: "epg-\(id)-\(index)")
+            await loadGuide(data)
         }
     }
 

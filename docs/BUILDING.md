@@ -62,9 +62,22 @@ On macOS the library is `libstreamium.dylib`.
 
 ## Apple app
 
-> The Apple sources have not been compiled yet: this repository's CI is the
-> first thing to build them. Expect to fix compile errors on the first run.
+> The Apple sources have not been compiled yet: whoever runs the bootstrap
+> script first is the first to build them. Expect to fix compile errors.
 
+One command does everything:
+
+```sh
+./apple/scripts/bootstrap-mac.sh          # build, generate, compile, open Xcode
+./apple/scripts/bootstrap-mac.sh --run    # ... and launch the Mac app instead
+./apple/scripts/bootstrap-mac.sh --mac-only --debug   # fastest iteration
+```
+
+It checks that Xcode, Rust and XcodeGen are present and says what to install if
+not, builds the XCFramework, generates the project, and compiles the macOS
+target. The full compiler output goes to `apple/build/xcodebuild.log`.
+
+The individual steps, if you prefer to run them yourself:
 
 ```sh
 ./apple/scripts/build-xcframework.sh     # Rust → StreamiumCoreFFI.xcframework + Swift bindings
@@ -73,18 +86,45 @@ xcodegen generate                        # project.yml → Streamium.xcodeproj
 open Streamium.xcodeproj
 ```
 
-The script builds the FFI crate for device (arm64), simulator (arm64 and
-x86-64) and macOS (arm64 and x86-64), merges the slices with `lipo`, wraps
-them with `xcodebuild -create-xcframework`, and drops the generated
-`StreamiumCore.swift` into the package. Both outputs are git-ignored; the
-script is the source of truth.
+`build-xcframework.sh` compiles the FFI crate for each slice, merges them with
+`lipo`, wraps them with `xcodebuild -create-xcframework`, and drops the
+generated `StreamiumCore.swift` into the package. Both outputs are git-ignored;
+the script is the source of truth.
+
+By default it builds only this machine's architecture, plus the iOS device and
+the matching simulator, because building the other architecture doubles the
+time and is never needed to run locally.
 
 Environment variables:
 
 - `PROFILE=debug` builds unoptimised Rust for faster iteration
   (default `release`).
-- `SKIP_TARGETS="x86_64-apple-ios x86_64-apple-darwin"` skips slices you do
-  not need locally.
+- `FULL=1` builds both architectures for macOS and the simulator, which is what
+  a distributable build needs.
+- `SKIP_IOS=1` builds the macOS slice only.
+
+## Connecting a provider
+
+Streamium ships no sources. In the app, **Sources → +**:
+
+- **Playlist (M3U)**: the playlist URL, and optionally an XMLTV guide URL. If
+  the playlist advertises one in its `#EXTM3U` header, that is used
+  automatically.
+- **Xtream account**: the server address, username and password. The address is
+  the part before `/player_api.php`; pasting the full URL also works.
+
+After adding, the source row shows what the provider reported: account status,
+connection count, expiry, and whether transport streams or HLS are in use. If
+the account is provisioned for HLS only, Streamium switches to HLS by itself
+rather than failing with an opaque error.
+
+Live channels default to transport streams, which give the lowest latency and
+use the demuxer in this repository. **Sources → Playback** switches to HLS if a
+provider needs it; refresh the source afterwards so the URLs are rebuilt.
+
+The channel list appears as soon as the playlist or provider listing is parsed.
+Guides are downloaded afterwards, in the background, because a provider's XMLTV
+can run to hundreds of megabytes and the channels must not wait for it.
 
 ## Adding an FFI function
 

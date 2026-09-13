@@ -77,22 +77,22 @@ public final class AVPlayerEngine: NSObject, PlayerEngine {
             item.observe(\.status, options: [.new]) { [weak self] item, _ in
                 let status = item.status
                 let message = item.error?.localizedDescription
-                Task { @MainActor [weak self] in self?.handle(status: status, message: message) }
+                Task { @MainActor in self?.handle(status: status, message: message) }
             },
             player.observe(\.timeControlStatus, options: [.new]) { [weak self] player, _ in
                 let tcs = player.timeControlStatus
-                Task { @MainActor [weak self] in self?.handle(timeControl: tcs) }
+                Task { @MainActor in self?.handle(timeControl: tcs) }
             },
             item.observe(\.loadedTimeRanges, options: [.new]) { [weak self] item, _ in
                 let ranges = item.loadedTimeRanges.map { $0.timeRangeValue }
                 let position = item.currentTime()
-                Task { @MainActor [weak self] in self?.updateBuffer(ranges: ranges, position: position) }
+                Task { @MainActor in self?.updateBuffer(ranges: ranges, position: position) }
             },
         ]
         endObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.state = .ended }
+            Task { @MainActor in self?.state = .ended }
         }
     }
 

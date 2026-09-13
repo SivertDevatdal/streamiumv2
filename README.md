@@ -41,6 +41,28 @@ docs/                     architecture, playback, compliance, roadmap, building
 
 ## Quick start
 
+### Run it on a Mac
+
+```sh
+./apple/scripts/bootstrap-mac.sh --run
+```
+
+That builds the Rust core for this machine, generates the Swift bindings and
+the XCFramework, creates the Xcode project, compiles the macOS app and
+launches it. Add `--mac-only` to skip the iOS slices for the fastest first
+build, or `--debug` for an unoptimised Rust build.
+
+It needs Xcode, Rust (`rustup`) and XcodeGen; it checks for each and tells you
+what to install. Nothing is installed without asking, apart from XcodeGen via
+Homebrew if you have it.
+
+Then, in the app: **Sources → + → Xtream account**, enter your server address,
+username and password. Channels appear under **Live TV**; the guide keeps
+downloading in the background. Long-press the player for a diagnostics overlay
+showing the detected format, time to first frame, buffer depth and codecs.
+
+### Everything else
+
 ```sh
 # Core: build and test on any OS
 cargo test --workspace

@@ -16,6 +16,8 @@ public struct SourceRecord: Identifiable, Codable, Equatable, Hashable {
     public var username: String?
     public var lastRefreshed: Date?
     public var lastError: String?
+    /// Provider-reported account state, filled in on refresh.
+    public var status: String?
 
     public init(id: UUID = UUID(), kind: Kind, name: String, location: String,
                 epgURL: String? = nil, username: String? = nil) {

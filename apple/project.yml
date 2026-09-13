@@ -1,12 +1,16 @@
 # XcodeGen specification. `xcodegen generate` produces Streamium.xcodeproj.
+#
+# Run apple/scripts/bootstrap-mac.sh instead of calling this directly: the
+# Swift package depends on StreamiumCoreFFI.xcframework, which must exist
+# before the project can resolve.
 name: Streamium
+
 options:
   bundleIdPrefix: app.streamium
+  createIntermediateGroups: true
   deploymentTarget:
     iOS: "17.0"
     macOS: "14.0"
-  createIntermediateGroups: true
-  generateEmptyDirectories: true
 
 settings:
   base:
@@ -15,14 +19,19 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
+    PRODUCT_NAME: Streamium
+    # Local development signs to run on this machine; no team required for
+    # macOS or the iOS Simulator.
+    CODE_SIGN_STYLE: Automatic
 
 packages:
   StreamiumKit:
     path: StreamiumKit
 
-targetTemplates:
-  App:
+targets:
+  Streamium-macOS:
     type: application
+    platform: macOS
     sources:
       - path: Streamium
         excludes:
@@ -34,58 +43,77 @@ targetTemplates:
         product: StreamiumCore
     entitlements:
       path: Streamium/Resources/Streamium.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.streamium.macos
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
     info:
-      path: Streamium/Resources/Info-${platform}.plist
+      path: Streamium/Resources/Info-macOS.plist
       properties:
         CFBundleDisplayName: Streamium
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        # Users connect to media servers and tuners on their own networks,
-        # which commonly speak plain HTTP. Justify this in App Review notes.
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHighResolutionCapable: true
+        # Media servers, tuners and many IPTV providers are reachable only
+        # over plain HTTP. Justify this in the App Review notes.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
           NSAllowsArbitraryLoadsForMedia: true
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Streamium connects to media servers and TV tuners on your local network.
 
-targets:
   Streamium-iOS:
-    templates: [App]
+    type: application
     platform: iOS
+    sources:
+      - path: Streamium
+        excludes:
+          - "Resources/**"
+    dependencies:
+      - package: StreamiumKit
+        product: StreamiumKit
+      - package: StreamiumKit
+        product: StreamiumCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.streamium.ios
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
     info:
+      path: Streamium/Resources/Info-iOS.plist
       properties:
+        CFBundleDisplayName: Streamium
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
-        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
-        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UIBackgroundModes: [audio]
         UIRequiresFullScreen: false
         LSSupportsOpeningDocumentsInPlace: true
         UISupportsDocumentBrowser: true
-
-  Streamium-macOS:
-    templates: [App]
-    platform: macOS
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.streamium.macos
-    info:
-      properties:
-        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
-        NSHumanReadableCopyright: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+          NSAllowsArbitraryLoadsForMedia: true
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: Streamium connects to media servers and TV tuners on your local network.
 
 schemes:
-  Streamium-iOS:
-    build:
-      targets: { Streamium-iOS: all }
-    run:
-      config: Debug
   Streamium-macOS:
     build:
       targets: { Streamium-macOS: all }
+    run:
+      config: Debug
+  Streamium-iOS:
+    build:
+      targets: { Streamium-iOS: all }
     run:
       config: Debug

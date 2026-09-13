@@ -29,7 +29,6 @@ public final class TransportStreamEngine: NSObject, PlayerEngine {
     private let pipeline: TransportStreamPipeline
     private var session: URLSession?
     private var task: URLSessionDataTask?
-    private var statusObservation: NSKeyValueObservation?
 
     public override init() {
         let layer = AVSampleBufferDisplayLayer()
@@ -38,7 +37,7 @@ public final class TransportStreamEngine: NSObject, PlayerEngine {
         pipeline = TransportStreamPipeline(displayLayer: layer)
         super.init()
         pipeline.onEvent = { [weak self] event in
-            Task { @MainActor [weak self] in self?.handle(event) }
+            Task { @MainActor in self?.handle(event) }
         }
     }
 
@@ -66,15 +65,8 @@ public final class TransportStreamEngine: NSObject, PlayerEngine {
         request.timeoutInterval = 15
         let task = session.dataTask(with: request)
         self.task = task
-        pipeline.task = task
+        pipeline.attach(task)
         task.resume()
-
-        statusObservation = displayLayer.observe(\.status, options: [.new]) { [weak self] layer, _ in
-            if layer.status == .failed {
-                let message = layer.error?.localizedDescription ?? "Video renderer failed"
-                Task { @MainActor [weak self] in self?.state = .failed(message) }
-            }
-        }
     }
 
     public func play() {
@@ -92,7 +84,6 @@ public final class TransportStreamEngine: NSObject, PlayerEngine {
         task = nil
         session?.invalidateAndCancel()
         session = nil
-        statusObservation = nil
         pipeline.stop()
         state = .idle
     }
@@ -139,7 +130,7 @@ final class TransportStreamPipeline: NSObject, URLSessionDataDelegate, @unchecke
     let queue = DispatchQueue(label: "app.streamium.ts-pipeline", qos: .userInteractive)
     let audioRenderer = AVSampleBufferAudioRenderer()
     var onEvent: ((Event) -> Void)?
-    weak var task: URLSessionDataTask?
+    private weak var task: URLSessionDataTask?
 
     private let displayLayer: AVSampleBufferDisplayLayer
     private let synchronizer = AVSampleBufferRenderSynchronizer()
@@ -191,6 +182,7 @@ final class TransportStreamPipeline: NSObject, URLSessionDataDelegate, @unchecke
             self.running = true
             self.paused = false
             self.startedAt = Date()
+            self.reportedRendererFailure = false
             self.resetDecoding(keepPrograms: false)
         }
     }
@@ -202,6 +194,12 @@ final class TransportStreamPipeline: NSObject, URLSessionDataDelegate, @unchecke
             self.synchronizer.setRate(0, time: .zero)
             self.demuxer = TransportStreamDemuxer()
         }
+    }
+
+    /// Hand over the transfer this pipeline is draining. Assigned on the
+    /// pipeline's own queue, which is the only place it is read.
+    func attach(_ task: URLSessionDataTask) {
+        queue.async { self.task = task }
     }
 
     func setPaused(_ p: Bool) {
@@ -271,8 +269,14 @@ final class TransportStreamPipeline: NSObject, URLSessionDataDelegate, @unchecke
 
     private func selectStreams(_ streams: [FfiStream]) {
         let video = streams.first { $0.codec == .h264 || $0.codec == .h265 }
-        let audioPreference: [FfiCodec] = [.aacAdts, .ac3, .eac3, .mpegAudio]
-        let audio = audioPreference.lazy.compactMap { pref in streams.first { $0.codec == pref } }.first
+        // Prefer the codec Apple decodes most efficiently, then fall back.
+        var audio: FfiStream?
+        for preferred in [FfiCodec.aacAdts, .ac3, .eac3, .mpegAudio] {
+            if let match = streams.first(where: { $0.codec == preferred }) {
+                audio = match
+                break
+            }
+        }
         if video?.pid != videoPid || audio?.pid != audioPid {
             resetDecoding(keepPrograms: true)
         }
@@ -445,9 +449,23 @@ final class TransportStreamPipeline: NSObject, URLSessionDataDelegate, @unchecke
     }
 
     private var lastProgressReport = Date.distantPast
+    private var reportedRendererFailure = false
+
     private func reportProgress() {
         guard Date().timeIntervalSince(lastProgressReport) > 0.5 else { return }
         lastProgressReport = Date()
+        if !reportedRendererFailure {
+            if videoRenderer.status == .failed {
+                reportedRendererFailure = true
+                onEvent?(.failed(videoRenderer.error?.localizedDescription ?? "Video renderer failed"))
+                return
+            }
+            if audioRenderer.status == .failed {
+                reportedRendererFailure = true
+                onEvent?(.failed(audioRenderer.error?.localizedDescription ?? "Audio renderer failed"))
+                return
+            }
+        }
         onEvent?(.progress(bytes: bytesReceived, buffered: bufferedSeconds, discontinuities: discontinuities))
         // Grow the startup buffer when the stream keeps stalling.
         if clockStarted, bufferedSeconds < 0.1, isLive {
@@ -496,15 +514,12 @@ final class TransportStreamPipeline: NSObject, URLSessionDataDelegate, @unchecke
             sampleSizeEntryCount: 1, sampleSizeArray: &size, sampleBufferOut: &sample
         ) == noErr, let sample else { return nil }
 
-        if !isSync,
-           let attachments = CMSampleBufferGetSampleAttachmentsArray(sample, createIfNecessary: true),
-           CFArrayGetCount(attachments) > 0 {
-            let dict = unsafeBitCast(CFArrayGetValueAtIndex(attachments, 0), to: CFMutableDictionary.self)
-            CFDictionarySetValue(
-                dict,
-                Unmanaged.passUnretained(kCMSampleAttachmentKey_NotSync).toOpaque(),
-                Unmanaged.passUnretained(kCFBooleanTrue).toOpaque()
-            )
+        // Anything that is not a key frame must be marked, or the decoder may
+        // try to start on it after a flush.
+        if !isSync, let attachments = CMSampleBufferGetSampleAttachmentsArray(sample, createIfNecessary: true) {
+            if let dictionary = (attachments as NSArray).firstObject as? NSMutableDictionary {
+                dictionary[kCMSampleAttachmentKey_NotSync as String] = true
+            }
         }
         return sample
     }
