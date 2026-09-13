@@ -50,7 +50,7 @@ Guidelines that get IPTV players rejected, and how Streamium answers them:
 | 5.2.3 Audio/Video Downloading | "Facilitates illegal file sharing" | No sources shipped, no discovery, no download of third-party streams (recording is limited to sources the user marks as own/permitted and is off by default). |
 | 5.2.2 Third-Party Sites/Services | Uses content without permission | The app is a client for the user's own services; explain this in the review notes. |
 | 4.2 Minimum Functionality | "Just a wrapper around a playlist" | Local library, network shares, media servers, radio, podcasts, tuner support. |
-| 2.1 App Completeness | Reviewer cannot test | Provide a demo source we own: a public-domain or self-hosted HLS test stream and a self-hosted XMLTV file. Never a third-party IPTV account. |
+| 2.1 App Completeness | Reviewer cannot test | `scripts/mock-provider.py` generates a self-hosted demo service: generated test-pattern channels, a movie and an XMLTV guide, over both Xtream and M3U. Host it and give the reviewer that address. Never a third-party IPTV account. |
 | 5.1.1 Data Collection | Watching habits | We collect none. Privacy nutrition label: no data collected. |
 | ATS exception | `NSAllowsArbitraryLoads` | Justify: users connect to private media servers and tuners on their own networks, which commonly use plain HTTP. |
 

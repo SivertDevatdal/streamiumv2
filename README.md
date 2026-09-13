@@ -33,9 +33,11 @@ crates/streamium-core     sans-IO domain logic (no networking, no threads)
 crates/streamium-mpegts   MPEG-TS demuxer feeding platform hardware decoders
 crates/streamium-ffi      UniFFI surface: the one crate that crosses languages
 crates/uniffi-bindgen     binary that generates Swift/Kotlin bindings
+crates/streamium-probe    diagnostic CLI for a real provider
 apple/StreamiumKit        Swift package: generated bindings + playback engines
 apple/Streamium           SwiftUI application (iOS/iPadOS/macOS targets)
 apple/scripts             build-xcframework.sh
+scripts/                  test-stream fixtures, demuxer verification, mock provider
 docs/                     architecture, playback, compliance, roadmap, building
 ```
 
@@ -60,6 +62,24 @@ Then, in the app: **Sources → + → Xtream account**, enter your server addres
 username and password. Channels appear under **Live TV**; the guide keeps
 downloading in the background. Long-press the player for a diagnostics overlay
 showing the detected format, time to first frame, buffer depth and codecs.
+
+### Testing without a provider
+
+```sh
+./scripts/mock-provider.py
+```
+
+A local stand-in for an IPTV service: three generated test-pattern channels in
+both transport stream and HLS form, a movie, and a twelve hour guide, served
+over both the Xtream protocol and as an M3U playlist. Add
+`http://localhost:8080` as an Xtream source with any username and password.
+
+To diagnose a real provider without the app, `streamium-probe` runs the same
+core and reports what the app would see, with credentials masked:
+
+```sh
+cargo run -p streamium-probe -- xtream http://host:8080 USERNAME PASSWORD
+```
 
 ### Staying up to date
 

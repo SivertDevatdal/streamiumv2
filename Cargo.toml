@@ -4,6 +4,7 @@ members = [
     "crates/streamium-core",
     "crates/streamium-mpegts",
     "crates/streamium-ffi",
+    "crates/streamium-probe",
     "crates/uniffi-bindgen",
 ]
 

@@ -1,0 +1,16 @@
+[package]
+name = "streamium-probe"
+description = "Diagnostic CLI: exercises the Streamium core against a real provider and reports what the app would see."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "probe"
+path = "src/main.rs"
+
+[dependencies]
+streamium-core = { path = "../streamium-core" }
+streamium-mpegts = { path = "../streamium-mpegts" }

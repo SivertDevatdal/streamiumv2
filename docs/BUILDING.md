@@ -122,6 +122,52 @@ the full log at `apple/build/xcodebuild.log`, and carries on waiting for the
 next commit. If the working tree has local edits the pull is skipped rather
 than risking them.
 
+## Testing without a provider
+
+`scripts/mock-provider.py` is a local stand-in for an IPTV service. It speaks
+enough of the Xtream Codes protocol to exercise the whole app and serves real
+generated video, so playback can actually be seen.
+
+```sh
+./scripts/mock-provider.py          # http://localhost:8080, needs ffmpeg
+```
+
+Then add a source in the app:
+
+| Type | Value |
+|---|---|
+| Xtream account | server `http://localhost:8080`, any username and password |
+| Playlist (M3U) | `http://localhost:8080/get.php?username=demo&password=demo` |
+
+It provides three live channels, each a different test pattern and audio pitch
+so a wrong stream is obvious, in both transport stream and HLS form, plus a
+movie and a twelve hour guide. That covers both playback engines and both
+source types.
+
+This is also the demo source to give App Review, which needs a working account
+that is not a third-party IPTV service. See
+[COMPLIANCE.md](COMPLIANCE.md).
+
+## Diagnosing a provider
+
+`streamium-probe` runs the same core the app runs, against a real provider,
+and reports what the app would see. It is the fastest way to tell whether a
+problem is in the provider, the parsing or the player.
+
+```sh
+cargo run -p streamium-probe -- xtream http://host:8080 USERNAME PASSWORD
+cargo run -p streamium-probe -- playlist http://host/list.m3u
+cargo run -p streamium-probe -- stream http://host/live/u/p/101.ts 10
+```
+
+It reports every HTTP call with status and timing, the account state, category
+and channel counts, how many channels match a guide entry, and then reads a
+live channel and demuxes it, finishing with whether video and audio were both
+recovered. Credentials are masked in the output, so a report is safe to paste
+into a bug report.
+
+Networking is delegated to `curl`, which keeps the core crates sans-IO.
+
 ## Connecting a provider
 
 Streamium ships no sources. In the app, **Sources → +**:

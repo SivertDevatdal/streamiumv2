@@ -692,6 +692,14 @@ name = "streamium-mpegts"
 version = "0.1.0"
 
 [[package]]
+name = "streamium-probe"
+version = "0.1.0"
+dependencies = [
+ "streamium-core",
+ "streamium-mpegts",
+]
+
+[[package]]
 name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
